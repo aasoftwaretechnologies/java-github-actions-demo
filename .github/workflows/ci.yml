@@ -2,7 +2,7 @@ name: Upload JAR to S3
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   upload:
