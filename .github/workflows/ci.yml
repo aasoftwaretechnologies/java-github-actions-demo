@@ -32,3 +32,9 @@ jobs:
 
       - name: Upload JAR to S3
         run: aws s3 cp target/*.jar s3://my-ci-artifacts/ 
+
+
+
+      - name: Build Docker image
+        run: |
+          docker build -t my-java-app --build-arg JAR_FILE=app.jar 
