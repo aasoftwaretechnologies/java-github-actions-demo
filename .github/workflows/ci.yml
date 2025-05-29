@@ -37,4 +37,4 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t my-java-app --build-arg JAR_FILE=app.jar 
+          docker buildx build -t my-java-app -f Dockerfile.custom . --load 
