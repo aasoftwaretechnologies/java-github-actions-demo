@@ -33,9 +33,12 @@ jobs:
       - name: Upload JAR to S3
         run: aws s3 cp target/*.jar s3://my-ci-artifacts/ 
 
+      - name: Download JAR from S3
+        run: aws s3 cp s3://my-ci-artifacts/java-github-actions-demo-1.0-SNAPSHOT.jar ./java-github-actions-demo-1.0-SNAPSHOT.jar
+
 
 
       - name: Build Docker image
         run: |
-          docker build --build-arg JAR_FILE=java-github-actions-demo-1.0-SNAPSHOT.jar -t my-java-app . --load
+          docker build --build-arg JAR_FILE=java-github-actions-demo-1.0-SNAPSHOT.jar -t my-java-app .
  
