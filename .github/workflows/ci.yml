@@ -20,7 +20,7 @@ jobs:
 
       - name: Build project
         run: |
-          ./mvnw package
+           mvn clean package
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
