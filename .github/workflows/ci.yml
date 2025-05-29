@@ -1,9 +1,7 @@
-name: Java CI with Maven
+name: Build and Upload to S3
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
     branches: [ "master" ]
 
 jobs:
@@ -11,25 +9,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Build with Maven
-      run: mvn clean install
+      - name: Build with Maven
+        run: mvn clean install
 
-    - name: Run tests
-      run: mvn test
+      - name: Upload to S3
+        uses: jakejarvis/s3-sync-action@v0.5.1
+        with:
+          args: --acl public-read --follow-symlinks --delete
+        env:
+          AWS_S3_BUCKET: my-ci-artifacts
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SOURCE_DIR: target
 
-
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v4.6.2
-      with:
-        name: java-app
-        path: target/*.jar
 
