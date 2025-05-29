@@ -30,4 +30,4 @@ jobs:
           aws-region: eu-north-1  # Stockholm
 
       - name: Upload JAR to S3
-        run: aws s3 cp target/*.jar s3://my-artifacts-bucket/ --acl public-read
+        run: aws s3 cp target/*.jar s3://my-artifacts-bucket/ 
