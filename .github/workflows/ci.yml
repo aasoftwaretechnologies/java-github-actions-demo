@@ -37,5 +37,5 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker buildx build --build-arg JAR_FILE=app.jar -t my-java-app . --load
+          docker build --build-arg JAR_FILE=java-github-actions-demo-1.0-SNAPSHOT.jar -t my-java-app . --load
  
