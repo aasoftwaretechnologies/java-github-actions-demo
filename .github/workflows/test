@@ -1,0 +1,39 @@
+name: Upload Docker image from S3 to ECR
+
+on:
+  workflow_dispatch:  # or use push, schedule, etc.
+
+jobs:
+  s3-to-ecr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Download Docker image from S3
+        run: |
+          aws s3 cp s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.S3_IMAGE_KEY }} image.tar
+
+      - name: Load Docker image from tar
+        run: |
+          docker load -i image.tar
+
+      - name: Tag Docker image for ECR
+        run: |
+          IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -n 1)
+          docker tag $IMAGE_ID ${{ secrets.ECR_REPOSITORY }}:latest
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REPOSITORY }}:latest
