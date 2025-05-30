@@ -1,14 +1,26 @@
-name: Upload Docker image from S3 to ECR
+name: Upload JAR to S3
 
 on:
-  workflow_dispatch:  # or use push, schedule, etc.
+  push:
+    branches:
+      - master
 
 jobs:
-  s3-to-ecr:
+  build:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+  S3_IMAGE_KEY: ${{ secrets.S3_IMAGE_KEY }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+
+jobs:
+  upload-to-ecr:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
@@ -16,24 +28,24 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download Docker image from S3
+      - name: Download Docker Image from S3
         run: |
-          aws s3 cp s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.S3_IMAGE_KEY }} image.tar
+          aws s3 cp s3://$S3_BUCKET/$S3_IMAGE_KEY image.tar
 
-      - name: Load Docker image from tar
+      - name: Load Docker Image
         run: |
           docker load -i image.tar
 
-      - name: Tag Docker image for ECR
+      - name: Tag Docker Image for ECR
         run: |
           IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -n 1)
-          docker tag $IMAGE_ID ${{ secrets.ECR_REPOSITORY }}:latest
+          docker tag $IMAGE_ID $ECR_REPOSITORY:latest
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Push image to ECR
+      - name: Push Image to ECR
         run: |
-          docker push ${{ secrets.ECR_REPOSITORY }}:latest
+          docker push $ECR_REPOSITORY:latest
