@@ -1,4 +1,4 @@
-name: Upload Docker Image from S3 to ECR
+name: Build JAR, Upload to S3, and Push Docker Image to ECR
 
 on:
   push:
@@ -8,24 +8,27 @@ on:
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
-  S3_IMAGE_KEY: ${{ secrets.S3_IMAGE_KEY }}
+  JAR_FILE_NAME: java-github-actions-demo-1.0-SNAPSHOT.jar
+  JAR_S3_KEY: app/java-github-actions-demo-1.0-SNAPSHOT.jar
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  IMAGE_TAG: latest
 
 jobs:
-  upload-to-ecr:
+  build-and-upload:
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-      - name: Build with Maven
-        run: mvn clean package
-
-      - name: List target directory contents
-        run: ls -l target/
+      - name: Build JAR with Maven
+        run: ./mvnw clean package
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -35,29 +38,35 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Upload JAR to S3
-        run: aws s3 cp target/*.jar s3://$S3_BUCKET/ 
-
-
-      - name: Download Docker Image from S3
         run: |
-          echo "Downloading image from S3..."
-          aws s3 cp s3://$S3_BUCKET/$S3_IMAGE_KEY image.tar
+          aws s3 cp target/${{ env.JAR_FILE_NAME }} s3://$S3_BUCKET/$JAR_S3_KEY
 
-      - name: Load Docker Image
-        run: |
-          echo "Loading image into Docker..."
-          docker load -i image.tar
+  download-and-push-ecr:
+    needs: build-and-upload
+    runs-on: ubuntu-latest
 
-      - name: Tag Docker Image for ECR
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download JAR from S3
         run: |
-          echo "Tagging image for ECR..."
-          IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -n 1)
-          docker tag $IMAGE_ID $ECR_REPOSITORY:latest
+          aws s3 cp s3://$S3_BUCKET/$JAR_S3_KEY app.jar
+
+      - name: Build Docker Image
+        run: |
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Push Image to ECR
         run: |
-          echo "Pushing image to ECR..."
-          docker push $ECR_REPOS_
+          docker push $ECR_REPOSITORY:$IMAGE_TAG
