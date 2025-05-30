@@ -1,15 +1,11 @@
-name: Upload JAR to S3
+name: Upload Docker Image from S3 to ECR
 
 on:
   push:
     branches:
       - master
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    environment: production
-    env:
+env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
   S3_IMAGE_KEY: ${{ secrets.S3_IMAGE_KEY }}
@@ -18,6 +14,7 @@ jobs:
 jobs:
   upload-to-ecr:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout Code
@@ -32,14 +29,17 @@ jobs:
 
       - name: Download Docker Image from S3
         run: |
+          echo "Downloading image from S3..."
           aws s3 cp s3://$S3_BUCKET/$S3_IMAGE_KEY image.tar
 
       - name: Load Docker Image
         run: |
+          echo "Loading image into Docker..."
           docker load -i image.tar
 
       - name: Tag Docker Image for ECR
         run: |
+          echo "Tagging image for ECR..."
           IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -n 1)
           docker tag $IMAGE_ID $ECR_REPOSITORY:latest
 
@@ -48,4 +48,5 @@ jobs:
 
       - name: Push Image to ECR
         run: |
-          docker push $ECR_REPOSITORY:latest
+          echo "Pushing image to ECR..."
+          docker push $ECR_REPOS_
